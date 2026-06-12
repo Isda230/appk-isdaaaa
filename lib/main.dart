@@ -14,9 +14,7 @@ class TiketPerjalananApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
       home: const SplashScreen(),
     );
@@ -70,6 +68,8 @@ class _SplashScreenState extends State<SplashScreen>
     controller.forward();
 
     Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -141,7 +141,22 @@ class HalamanUtama extends StatefulWidget {
 
 class _HalamanUtamaState extends State<HalamanUtama> {
   int indexHalaman = 0;
+  String kelasDipilihBeranda = 'Ekonomi';
+
   final List<Tiket> riwayat = [];
+
+  void pindahKePesanTiket() {
+    setState(() {
+      indexHalaman = 1;
+    });
+  }
+
+  void pilihKelasDariBeranda(String kelas) {
+    setState(() {
+      kelasDipilihBeranda = kelas;
+      indexHalaman = 1;
+    });
+  }
 
   void tambahTiket(Tiket tiket) {
     setState(() {
@@ -150,12 +165,29 @@ class _HalamanUtamaState extends State<HalamanUtama> {
     });
   }
 
+  void hapusTiket(int index) {
+    setState(() {
+      riwayat.removeAt(index);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final halaman = [
-      const BerandaPage(),
-      PesanTiketPage(onPesan: tambahTiket),
-      RiwayatPage(riwayat: riwayat),
+    final List<Widget> halaman = [
+      BerandaPage(
+        onPesanSekarang: pindahKePesanTiket,
+        kelasDipilih: kelasDipilihBeranda,
+        onPilihKelas: pilihKelasDariBeranda,
+      ),
+      PesanTiketPage(
+        key: ValueKey(kelasDipilihBeranda),
+        kelasAwal: kelasDipilihBeranda,
+        onPesan: tambahTiket,
+      ),
+      RiwayatPage(
+        riwayat: riwayat,
+        onHapus: hapusTiket,
+      ),
       const ProfilPage(),
     ];
 
@@ -238,10 +270,19 @@ class Watermark extends StatelessWidget {
   }
 }
 
-// ================= BERANDA =================
+// ================= Mulai Perjalanmu =================
 
 class BerandaPage extends StatelessWidget {
-  const BerandaPage({super.key});
+  final VoidCallback onPesanSekarang;
+  final String kelasDipilih;
+  final Function(String) onPilihKelas;
+
+  const BerandaPage({
+    super.key,
+    required this.onPesanSekarang,
+    required this.kelasDipilih,
+    required this.onPilihKelas,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +291,7 @@ class BerandaPage extends StatelessWidget {
         backgroundColor: const Color(0xFFF2F6FF),
         appBar: AppBar(
           title: const Text(
-            'Beranda',
+            'Mulai Perjalananmu',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
@@ -261,7 +302,7 @@ class BerandaPage extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
+              tween: Tween<double>(begin: 0, end: 1),
               duration: const Duration(milliseconds: 700),
               builder: (context, value, child) {
                 return Opacity(
@@ -283,16 +324,16 @@ class BerandaPage extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(22),
                 ),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.directions_boat,
                       size: 60,
                       color: Colors.white,
                     ),
-                    SizedBox(height: 12),
-                    Text(
+                    const SizedBox(height: 12),
+                    const Text(
                       'Selamat Datang',
                       style: TextStyle(
                         color: Colors.white,
@@ -300,12 +341,22 @@ class BerandaPage extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 8),
-                    Text(
+                    const SizedBox(height: 8),
+                    const Text(
                       'Pesan tiket kapal dari Pelabuhan Isda Yunisari menuju Makassar dengan mudah.',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    ElevatedButton.icon(
+                      onPressed: onPesanSekarang,
+                      icon: const Icon(Icons.confirmation_number),
+                      label: const Text('Pesan Tiket Sekarang'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.blue,
                       ),
                     ),
                   ],
@@ -314,19 +365,29 @@ class BerandaPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             menuCard(
+              context,
               Icons.location_on,
               'Rute Perjalanan',
               'Pelabuhan Isda Yunisari - Makassar',
             ),
             menuCard(
+              context,
               Icons.event_seat,
               'Pilihan Kelas',
-              'Ekonomi, Bisnis, dan VIP',
+              'Kelas dipilih: $kelasDipilih',
+              isPilihKelas: true,
             ),
             menuCard(
+              context,
               Icons.payments,
               'Harga Tiket',
-              'Mulai dari Rp 250.000',
+              'Ekonomi Rp 250.000, Bisnis Rp 400.000, VIP Rp 600.000',
+            ),
+            menuCard(
+              context,
+              Icons.schedule,
+              'Jadwal Kapal',
+              'Keberangkatan setiap hari pukul 08.00 WITA',
             ),
           ],
         ),
@@ -334,7 +395,13 @@ class BerandaPage extends StatelessWidget {
     );
   }
 
-  Widget menuCard(IconData icon, String title, String subtitle) {
+  Widget menuCard(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String subtitle, {
+    bool isPilihKelas = false,
+  }) {
     return Card(
       elevation: 3,
       margin: const EdgeInsets.only(bottom: 12),
@@ -342,6 +409,29 @@ class BerandaPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
+        onTap: () {
+          if (isPilihKelas) {
+            tampilkanPilihanKelas(context);
+          } else {
+            showDialog(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  title: Text(title),
+                  content: Text(subtitle),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Tutup'),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+        },
         leading: CircleAvatar(
           backgroundColor: Colors.blue.shade50,
           child: Icon(icon, color: Colors.blue),
@@ -355,16 +445,88 @@ class BerandaPage extends StatelessWidget {
       ),
     );
   }
+
+  void tampilkanPilihanKelas(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Pilih Kelas Tiket'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              pilihanKelasItem(
+                context,
+                'Ekonomi',
+                'Rp 250.000',
+                Icons.event_seat,
+              ),
+              pilihanKelasItem(
+                context,
+                'Bisnis',
+                'Rp 400.000',
+                Icons.chair,
+              ),
+              pilihanKelasItem(
+                context,
+                'VIP',
+                'Rp 600.000',
+                Icons.workspace_premium,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget pilihanKelasItem(
+    BuildContext context,
+    String kelas,
+    String harga,
+    IconData icon,
+  ) {
+    final bool aktif = kelas == kelasDipilih;
+
+    return Card(
+      color: aktif ? Colors.blue.shade50 : Colors.white,
+      child: ListTile(
+        leading: Icon(icon, color: Colors.blue),
+        title: Text(
+          kelas,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(harga),
+        trailing: Icon(
+          aktif ? Icons.check_circle : Icons.check_circle_outline,
+          color: aktif ? Colors.green : Colors.grey,
+        ),
+        onTap: () {
+          Navigator.pop(context);
+          onPilihKelas(kelas);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Kelas $kelas berhasil dipilih'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 // ================= PESAN TIKET =================
 
 class PesanTiketPage extends StatefulWidget {
   final Function(Tiket) onPesan;
+  final String kelasAwal;
 
   const PesanTiketPage({
     super.key,
     required this.onPesan,
+    required this.kelasAwal,
   });
 
   @override
@@ -375,30 +537,55 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
   final TextEditingController namaController = TextEditingController();
   final TextEditingController jumlahController = TextEditingController();
 
-  String kelas = 'Ekonomi';
+  late String kelas;
   String tanggal = 'Pilih Tanggal';
   int harga = 250000;
   int total = 0;
   bool loading = false;
 
-  void hitungTotal() {
-    int jumlah = int.tryParse(jumlahController.text) ?? 0;
+  @override
+  void initState() {
+    super.initState();
+    kelas = widget.kelasAwal;
+    harga = ambilHargaKelas();
+  }
 
+  @override
+  void dispose() {
+    namaController.dispose();
+    jumlahController.dispose();
+    super.dispose();
+  }
+
+  int ambilHargaKelas() {
     if (kelas == 'Ekonomi') {
-      harga = 250000;
+      return 250000;
     } else if (kelas == 'Bisnis') {
-      harga = 400000;
+      return 400000;
     } else {
-      harga = 600000;
+      return 600000;
     }
+  }
+
+  String formatRupiah(int angka) {
+    return angka.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
+  }
+
+  void hitungTotal() {
+    final int jumlah = int.tryParse(jumlahController.text) ?? 0;
+    final int hargaSekarang = ambilHargaKelas();
 
     setState(() {
-      total = jumlah * harga;
+      harga = hargaSekarang;
+      total = jumlah * hargaSekarang;
     });
   }
 
   Future<void> pilihTanggal() async {
-    final hasil = await showDatePicker(
+    final DateTime? hasil = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
@@ -413,8 +600,8 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
   }
 
   Future<void> pesanTiket() async {
-    if (namaController.text.isEmpty ||
-        jumlahController.text.isEmpty ||
+    if (namaController.text.trim().isEmpty ||
+        jumlahController.text.trim().isEmpty ||
         tanggal == 'Pilih Tanggal') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -425,7 +612,7 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
       return;
     }
 
-    int jumlah = int.tryParse(jumlahController.text) ?? 0;
+    final int jumlah = int.tryParse(jumlahController.text) ?? 0;
 
     if (jumlah <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -437,24 +624,29 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
       return;
     }
 
-    hitungTotal();
+    final int hargaSekarang = ambilHargaKelas();
+    final int totalSekarang = jumlah * hargaSekarang;
 
     setState(() {
+      harga = hargaSekarang;
+      total = totalSekarang;
       loading = true;
     });
 
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return;
 
     setState(() {
       loading = false;
     });
 
-    final tiket = Tiket(
-      nama: namaController.text,
+    final Tiket tiket = Tiket(
+      nama: namaController.text.trim(),
       tanggal: tanggal,
       kelas: kelas,
       jumlah: jumlah,
-      total: total,
+      total: totalSekarang,
     );
 
     showDialog(
@@ -468,10 +660,16 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
             'Tanggal: ${tiket.tanggal}\n'
             'Kelas: ${tiket.kelas}\n'
             'Jumlah: ${tiket.jumlah}\n'
-            'Total: Rp ${tiket.total}',
+            'Total: Rp ${formatRupiah(tiket.total)}',
           ),
           actions: [
             TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Tutup'),
+            ),
+            ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
 
@@ -481,8 +679,9 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
                 jumlahController.clear();
 
                 setState(() {
-                  kelas = 'Ekonomi';
+                  kelas = widget.kelasAwal;
                   tanggal = 'Pilih Tanggal';
+                  harga = ambilHargaKelas();
                   total = 0;
                 });
               },
@@ -511,7 +710,7 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
+            tween: Tween<double>(begin: 0, end: 1),
             duration: const Duration(milliseconds: 700),
             builder: (context, value, child) {
               return Opacity(
@@ -589,9 +788,12 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
                         ),
                       ],
                       onChanged: (value) {
+                        if (value == null) return;
+
                         setState(() {
-                          kelas = value!;
+                          kelas = value;
                         });
+
                         hitungTotal();
                       },
                     ),
@@ -629,7 +831,8 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
                         children: [
                           detail('Berangkat', 'Pelabuhan Isda Yunisari'),
                           detail('Tujuan', 'Makassar, Sulawesi Selatan'),
-                          detail('Total Harga', 'Rp $total'),
+                          detail('Harga Tiket', 'Rp ${formatRupiah(harga)}'),
+                          detail('Total Harga', 'Rp ${formatRupiah(total)}'),
                         ],
                       ),
                     ),
@@ -647,8 +850,13 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
                           ),
                         ),
                         child: loading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Text(
                                 'Pesan Tiket Sekarang',
@@ -696,11 +904,20 @@ class _PesanTiketPageState extends State<PesanTiketPage> {
 
 class RiwayatPage extends StatelessWidget {
   final List<Tiket> riwayat;
+  final Function(int) onHapus;
 
   const RiwayatPage({
     super.key,
     required this.riwayat,
+    required this.onHapus,
   });
+
+  String formatRupiah(int angka) {
+    return angka.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -709,7 +926,7 @@ class RiwayatPage extends StatelessWidget {
         backgroundColor: const Color(0xFFF2F6FF),
         appBar: AppBar(
           title: const Text(
-            'Riwayat',
+            'Riwayat Pemesanan',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
@@ -719,7 +936,7 @@ class RiwayatPage extends StatelessWidget {
         body: riwayat.isEmpty
             ? const Center(
                 child: Text(
-                  'Belum ada riwayat pemesanan.',
+                  'Belum ada riwayat pemesanan tiket.',
                   style: TextStyle(fontSize: 18),
                 ),
               )
@@ -748,10 +965,45 @@ class RiwayatPage extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        '${tiket.tanggal} • ${tiket.kelas}\nTotal: Rp ${tiket.total}',
+                        '${tiket.tanggal} • ${tiket.kelas}\n'
+                        '${tiket.jumlah} tiket • Rp ${formatRupiah(tiket.total)}',
                       ),
                       isThreeLine: true,
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text('Hapus Tiket'),
+                                content: const Text(
+                                  'Yakin ingin menghapus riwayat tiket ini?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text('Batal'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      onHapus(index);
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Hapus'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                      ),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -778,6 +1030,13 @@ class DetailTiketPage extends StatelessWidget {
     super.key,
     required this.tiket,
   });
+
+  String formatRupiah(int angka) {
+    return angka.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -823,7 +1082,24 @@ class DetailTiketPage extends StatelessWidget {
                     item('Tanggal', tiket.tanggal),
                     item('Kelas', tiket.kelas),
                     item('Jumlah Tiket', '${tiket.jumlah} tiket'),
-                    item('Total Harga', 'Rp ${tiket.total}'),
+                    item('Total Harga', 'Rp ${formatRupiah(tiket.total)}'),
+                    const SizedBox(height: 20),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'Status: Tiket berhasil dipesan.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -878,10 +1154,13 @@ class ProfilPage extends StatelessWidget {
         ),
         body: ListView(
           padding: const EdgeInsets.all(16),
-          children: const [
+          children: [
             Card(
               elevation: 4,
-              child: Padding(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Padding(
                 padding: EdgeInsets.all(22),
                 child: Column(
                   children: [
@@ -896,16 +1175,53 @@ class ProfilPage extends StatelessWidget {
                     ),
                     SizedBox(height: 15),
                     Text(
-                      'Aplikasi Tiket Kapal',
+                      'IsSea',
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 8),
+                    Text('Aplikasi Pemesanan Tiket Kapal'),
+                    SizedBox(height: 8),
                     Text('Pelabuhan Isda Yunisari'),
                     SizedBox(height: 8),
                     Text('Rute: Makassar, Sulawesi Selatan'),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: Icon(Icons.info, color: Colors.blue),
+                      title: Text('Tentang Aplikasi'),
+                      subtitle: Text(
+                        'Aplikasi ini digunakan untuk simulasi pemesanan tiket kapal secara digital.',
+                      ),
+                    ),
+                    Divider(),
+                    ListTile(
+                      leading: Icon(Icons.security, color: Colors.blue),
+                      title: Text('Status Aplikasi'),
+                      subtitle: Text('Beroperasi secara offline pada perangkat.'),
+                    ),
+                    Divider(),
+                    ListTile(
+                      leading: Icon(Icons.support_agent, color: Colors.blue),
+                      title: Text('Layanan'),
+                      subtitle: Text(
+                        'Pemesanan tiket, riwayat tiket, detail tiket, dan informasi rute.',
+                      ),
+                    ),
                   ],
                 ),
               ),
